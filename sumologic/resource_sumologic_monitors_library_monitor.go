@@ -133,14 +133,6 @@ func resourceSumologicMonitorsLibraryMonitor() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"static_condition": {
-							Type:     schema.TypeList,
-							MaxItems: 1,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: staticTriggerConditionSchema,
-							},
-						},
 						"logs_static_condition": {
 							Type:     schema.TypeList,
 							MaxItems: 1,
@@ -491,8 +483,6 @@ func jsonToTriggerConditionsBlock(conditions []TriggerCondition) map[string]inte
 	triggerConditionsBlock := map[string]interface{}{}
 	if len(dataConditions) > 0 {
 		switch dataConditions[0].DetectionMethod {
-		case staticConditionDetectionMethod:
-			triggerConditionsBlock[staticConditionFieldName] = wrapInSingletonArray(jsonToStaticConditionBlock(dataConditions))
 		case logsStaticConditionDetectionMethod:
 			triggerConditionsBlock[logsStaticConditionFieldName] = wrapInSingletonArray(jsonToLogsStaticConditionBlock(dataConditions))
 		case metricsStaticConditionDetectionMethod:
@@ -768,9 +758,6 @@ func singletonFromResourceData(block *schema.ResourceData, field string) (map[st
 
 func triggerConditionsBlockToJson(block map[string]interface{}) []TriggerCondition {
 	conditions := make([]TriggerCondition, 0)
-	if sc, ok := unwrapSingletonArray(block, staticConditionFieldName); ok {
-		conditions = append(conditions, staticConditionBlockToJson(sc)...)
-	}
 	if sc, ok := unwrapSingletonArray(block, logsStaticConditionFieldName); ok {
 		conditions = append(conditions, logsStaticConditionBlockToJson(sc)...)
 	}
@@ -837,17 +824,6 @@ func (baseCondition *TriggerCondition) cloneForEachOutlierCriticalAndWarningBloc
 		conditions = append(conditions, mapper(warning, "Warning")...)
 	}
 	return conditions
-}
-
-func staticConditionBlockToJson(block map[string]interface{}) []TriggerCondition {
-	base := TriggerCondition{
-		TimeRange:       block["time_range"].(string),
-		OccurrenceType:  block["occurrence_type"].(string),
-		TriggerSource:   block["trigger_source"].(string),
-		Field:           block["field"].(string),
-		DetectionMethod: staticConditionDetectionMethod,
-	}
-	return base.cloneForEachCriticalAndWarningBlock(block)
 }
 
 func logsStaticConditionBlockToJson(block map[string]interface{}) []TriggerCondition {
@@ -920,7 +896,6 @@ func metricsMissingDataConditionBlockToJson(block map[string]interface{}) []Trig
 	return []TriggerCondition{alert, resolution}
 }
 
-var staticConditionFieldName = "static_condition"
 var logsStaticConditionFieldName = "logs_static_condition"
 var metricsStaticConditionFieldName = "metrics_static_condition"
 var logsOutlierConditionFieldName = "logs_outlier_condition"
@@ -928,7 +903,7 @@ var metricsOutlierConditionFieldName = "metrics_outlier_condition"
 var logsMissingDataConditionFieldName = "logs_missing_data_condition"
 var metricsMissingDataConditionFieldName = "metrics_missing_data_condition"
 var allConditionFieldNames = append(allDataConditionFieldNames, allMissingDataConditionFieldNames...)
-var allDataConditionFieldNames = []string{staticConditionFieldName,
+var allDataConditionFieldNames = []string{
 	logsStaticConditionFieldName,
 	metricsStaticConditionFieldName,
 	logsOutlierConditionFieldName,
@@ -936,7 +911,6 @@ var allDataConditionFieldNames = []string{staticConditionFieldName,
 }
 var allMissingDataConditionFieldNames = []string{logsMissingDataConditionFieldName, metricsMissingDataConditionFieldName}
 
-var staticConditionDetectionMethod = "StaticCondition"
 var logsStaticConditionDetectionMethod = "LogsStaticCondition"
 var metricsStaticConditionDetectionMethod = "MetricsStaticCondition"
 var logsOutlierConditionDetectionMethod = "LogsOutlierCondition"
@@ -1046,40 +1020,6 @@ var alertAndResolutionThresholdResource = schema.Resource{
 			MaxItems: 1,
 			Elem:     &thresholdResource,
 		},
-	},
-}
-
-var staticTriggerConditionSchema = map[string]*schema.Schema{
-	"field": {
-		Type:     schema.TypeString,
-		Optional: true,
-	},
-	"time_range": {
-		Type:         schema.TypeString,
-		Required:     true,
-		ValidateFunc: validation.StringInSlice([]string{"5m", "-5m", "10m", "-10m", "15m", "-15m", "30m", "-30m", "60m", "-60m", "1h", "-1h", "3h", "-3h", "6h", "-6h", "12h", "-12h", "24h", "-24h", "1d", "-1d"}, false),
-	},
-	"trigger_source": {
-		Type:         schema.TypeString,
-		Required:     true,
-		ValidateFunc: validation.StringInSlice([]string{"AllTimeSeries", "AnyTimeSeries", "AllResults"}, false),
-	},
-	"occurrence_type": {
-		Type:         schema.TypeString,
-		Required:     true,
-		ValidateFunc: validation.StringInSlice([]string{"AtLeastOnce", "Always", "ResultCount", "MissingData"}, false),
-	},
-	"critical": {
-		Type:     schema.TypeList,
-		Optional: true,
-		MaxItems: 1,
-		Elem:     &alertAndResolutionThresholdWithTypeResource,
-	},
-	"warning": {
-		Type:     schema.TypeList,
-		Optional: true,
-		MaxItems: 1,
-		Elem:     &alertAndResolutionThresholdWithTypeResource,
 	},
 }
 

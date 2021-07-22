@@ -22,16 +22,12 @@ func TestSumologicMonitorsLibraryMonitor_conversionsToFromTriggerConditionsShoul
 	}
 	testTriggerConditions := [][]TriggerCondition{
 		[]TriggerCondition{
-			exampleStaticTriggerCondition("Critical", 100, "GreaterThan"),
-			exampleStaticTriggerCondition("ResolvedCritical", 100, "LessThanOrEqual"),
-		},
-		[]TriggerCondition{
-			exampleStaticTriggerCondition("Warning", 90, "GreaterThan"),
-			exampleStaticTriggerCondition("ResolvedWarning", 90, "LessThanOrEqual"),
-		},
-		[]TriggerCondition{
 			exampleLogsStaticTriggerCondition("Critical", 100, "GreaterThan"),
 			exampleLogsStaticTriggerCondition("ResolvedCritical", 100, "LessThanOrEqual"),
+		},
+		[]TriggerCondition{
+			exampleLogsStaticTriggerCondition("Warning", 90, "GreaterThan"),
+			exampleLogsStaticTriggerCondition("ResolvedWarning", 90, "LessThanOrEqual"),
 		},
 		[]TriggerCondition{
 			exampleMetricsStaticTriggerCondition("Critical", 100, "GreaterThan"),
@@ -54,10 +50,10 @@ func TestSumologicMonitorsLibraryMonitor_conversionsToFromTriggerConditionsShoul
 			exampleMetricsMissingDataTriggerCondition("ResolvedMissingData"),
 		},
 		[]TriggerCondition{
-			exampleStaticTriggerCondition("Critical", 100, "GreaterThan"),
-			exampleStaticTriggerCondition("ResolvedCritical", 100, "LessThanOrEqual"),
-			exampleStaticTriggerCondition("Warning", 90, "GreaterThan"),
-			exampleStaticTriggerCondition("ResolvedWarning", 90, "LessThanOrEqual"),
+			exampleLogsStaticTriggerCondition("Critical", 100, "GreaterThan"),
+			exampleLogsStaticTriggerCondition("ResolvedCritical", 100, "LessThanOrEqual"),
+			exampleLogsStaticTriggerCondition("Warning", 90, "GreaterThan"),
+			exampleLogsStaticTriggerCondition("ResolvedWarning", 90, "LessThanOrEqual"),
 			exampleLogsMissingDataTriggerCondition("MissingData"),
 			exampleLogsMissingDataTriggerCondition("ResolvedMissingData"),
 		},
@@ -589,24 +585,6 @@ resource "sumologic_monitor" "test" {
 }`, testName, monitorType, query, trigger, triggerTysStr)
 }
 
-var exampleStaticTriggerConditionBlock = `
-   static_condition {
-     critical {
-       alert {
-         threshold = 100.0
-         threshold_type = "GreaterThan"
-       }
-       resolution {
-         threshold = 90
-         threshold_type = "LessThanOrEqual"
-       }
-     }
-     field = "some field"
-     time_range = "30m"
-     trigger_source = "AllResults"
-     occurrence_type = "ResultCount"
-   }`
-
 var exampleLogsStaticTriggerConditionBlock = `
    logs_static_condition {
      critical {
@@ -670,12 +648,6 @@ var exampleMetricsMissingDataTriggerConditionBlock = `
      trigger_source = "AnyTimeSeries"
    }`
 
-func exampleStaticMonitor(testName string) string {
-	query := "error | timeslice 1m | count as field by _timeslice"
-	return exampleMonitorWithTriggerCondition(testName, "Logs", query,
-		exampleStaticTriggerConditionBlock, []string{"Critical", "ResolvedCritical"})
-}
-
 func exampleLogsStaticMonitor(testName string) string {
 	query := "error | timeslice 1m | count as field by _timeslice"
 	return exampleMonitorWithTriggerCondition(testName, "Logs", query,
@@ -713,24 +685,12 @@ func exampleMetricsMissingDataMonitor(testName string) string {
 }
 
 var allExampleMonitors = []func(testName string) string{
-	exampleStaticMonitor,
 	exampleLogsStaticMonitor,
 	exampleMetricsStaticMonitor,
 	exampleLogsOutlierMonitor,
 	exampleMetricsOutlierMonitor,
 	exampleLogsMissingDataMonitor,
 	exampleMetricsMissingDataMonitor,
-}
-
-func exampleStaticTriggerCondition(triggerType string, threshold float64, thresholdType string) TriggerCondition {
-	return TriggerCondition{
-		TimeRange:       "30m",
-		TriggerType:     triggerType,
-		Threshold:       threshold,
-		ThresholdType:   thresholdType,
-		Field:           "field",
-		DetectionMethod: "StaticCondition",
-	}
 }
 
 func exampleLogsStaticTriggerCondition(triggerType string, threshold float64, thresholdType string) TriggerCondition {
